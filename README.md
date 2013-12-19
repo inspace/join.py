@@ -2,6 +2,7 @@ join.py
 =======
 
 A simple command line tool written in Python to perform joins on text files.
+
 Email comments and suggestions to calderm at usc.edu.
 
 ### Examples
