@@ -8,7 +8,7 @@ except:
     sys.stderr.write('Looks like you are using < Python 2.7. Please install the argparse module manually with "sudo pip install argparse" or "sudo easy_install argparse"\n')
     sys.exit(2)
 
-version='0.1'
+version='1.0'
 
 class Join:
     
