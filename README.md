@@ -68,7 +68,7 @@ produces
 - [ ] ignore commented out lines
 
 ###Requirements
-So far this has only been tested with Python 2.7. It should work with other versions but you will need to install the argparse module that comes with 2.7 by default. This is usually easy to do with "sudo pip install argparse" or "sudo easy_install argparse".
+So far this has only been tested with Python 2.7. It should work with older versions but you will need to install the argparse module that comes with 2.7 by default. This is usually easy to do with "sudo pip install argparse" or "sudo easy_install argparse".
 
 
 ###All Options
