@@ -64,7 +64,14 @@ produces
 3|Mark|Dudeguy|777-777-7777|Baz|Mark
 ```
 
-####All Options
+###To Do
+- [ ] ignore commented out lines
+
+###Requirements
+So far this has only been tested with Python 2.7. It should work with other versions but you will need to install the argparse module that comes with 2.7 by default. This is usually easy to do with "sudo pip install argparse" or "sudo easy_install argparse".
+
+
+###All Options
 ```
 $join.py -h
 ```
@@ -102,6 +109,3 @@ optional arguments:
                         Only output one of the matching columns (default: off)
   -v, --version         show program's version number and exit
 ```
-
-### ToDo
-- [ ] ignore commented out lines
