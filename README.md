@@ -63,5 +63,44 @@ produces
 3|Mark|Dudeguy|777-777-7777|Baz|Mark
 ```
 
+####All Options
+```
+$join.py -h
+```
+
+```
+usage: join.py [-h] [-c1 COLUMN1] [-c2 COLUMN2] [-d1 DELIMITER1]
+               [-d2 DELIMITER2] [-o OUTPUT_DELIMITER] [-s JOIN_SEPARATOR] [-f]
+               [-r] [-v]
+               file1 file2
+
+Join two files.
+
+positional arguments:
+  file1                 Path to file 1
+  file2                 Path to file 2
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c1 COLUMN1, --column1 COLUMN1
+                        Column number for file 1 (default: 1)
+  -c2 COLUMN2, --column2 COLUMN2
+                        Column number for file 2 (default: 1)
+  -d1 DELIMITER1, --delimiter1 DELIMITER1
+                        Delimiter for file 1 (default: " ")
+  -d2 DELIMITER2, --delimiter2 DELIMITER2
+                        Delimiter for file 2 (default: " ")
+  -o OUTPUT_DELIMITER, --output-delimiter OUTPUT_DELIMITER
+                        Output delimiter. Default is to leave delimiters for
+                        each file in place.
+  -s JOIN_SEPARATOR, --join-separator JOIN_SEPARATOR
+                        Separator between joined lines. This will be set to
+                        --output-delimiter if not overridden. (default: " ")
+  -f, --filter-mode     Only output matches from file1 (default: off)
+  -r, --remove-duplicate
+                        Only output one of the matching columns (default: off)
+  -v, --version         show program's version number and exit
+```
+
 ### ToDo
 - [ ] ignore commented out lines
