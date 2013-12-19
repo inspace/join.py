@@ -28,6 +28,9 @@ class Join:
         self.remove_duplicate = False
 
     def parse_file1(self):
+        """
+        Returns: dictionary of unique column values mapped to lines 
+        """
 
         f1_map = {}
 
@@ -35,19 +38,20 @@ class Join:
         try:
             f = open(self.file1)
             linenum = 0
-            for line in f:
+            for line in f:     #for each line in file1
                 linenum += 1
 
                 line = line.strip()
-                chunks = line.split(self.delimiter1)
+                chunks = line.split(self.delimiter1) #split by file1 delimiter
 
-                if len(chunks) < self.column1:
+                if len(chunks) < self.column1:   
+                    #print error if the specified column doesn't exist for this line
                     sys.stderr.write(self.basename1+' line '+str(linenum)+': column missing\n')
                     continue
 
-                key = chunks[self.column1-1]
+                key = chunks[self.column1-1] #get value at column1
     
-                if key not in f1_map:
+                if key not in f1_map:        #initialize list to hold lines for this key
                     f1_map[key] = list()
     
                 f1_map[key].append(line)
@@ -62,47 +66,61 @@ class Join:
 
     def run(self):
         
-        f1_map = self.parse_file1()
+        f1_map = self.parse_file1() #parse file1
 
         f = None
         try:
             f = open(self.file2)
             linenum = 0
-            for line in f:
+            for line in f:   #for each line in file2
                 linenum += 1
 
                 line = line.strip()
                 chunks = line.split(self.delimiter2)
     
                 if len(chunks) < self.column2:
+                    #print error if the specified column doesn't exist for this line
                     sys.stderr.write(self.basename2+' line '+str(linenum)+': column missing\n')
                     continue
 
-                key = chunks[self.column2-1]
+                key = chunks[self.column2-1]  #value at column2 on this line
 
+
+                """
+                If the output_delimiter is set then we need to replace in each line.
+
+                We also handle the remove_duplicate flag here so it impacts what the 
+                outputted line looks like.
+                """
                 if self.output_delimiter != None:
                     if self.remove_duplicate:
+                        #remove the joined column from file2's line
                         chunks.pop(self.column2-1) #remove matching column from file2 line
                         line = self.output_delimiter.join(chunks)
                     else:
                         line = line.replace(self.delimiter2, self.output_delimiter)
-                else:
-                    #output delimiter is None
+                else: #output delimiter is None
                     if self.remove_duplicate:
-                        chunks.pop(self.column2-1)
+                        #remove the joined column from file2's line
+                        chunks.pop(self.column2-1) #remove matching column from file2 line
                         line = self.delimiter2.join(chunks)
 
+
+                
                 if key in f1_map: #if key from file2 is in file1 then join these
                 
-                    f1_lines = f1_map[key]
+                    f1_lines = f1_map[key]  #get all the lines with this key from file1
                     for f1_line in f1_lines:
 
                         if self.output_delimiter != None:
+                            #if output_delimiter is set then replace file1's delimiter
                             f1_line = f1_line.replace(self.delimiter1, self.output_delimiter)
 
-                        if self.filter_mode:
+                        # if filter flag is set then we don't output lines from file2
+                        if self.filter_mode: 
                             print(f1_line)
                         else:
+                            #otherwise print file1 line and then file2 line
                             print(f1_line+self.join_separator+line)
         except:
             sys.stderr.write('Error reading: '+self.file2+'\n')
@@ -112,7 +130,10 @@ class Join:
                 f.close()
 
 def validate_args(args):
-    
+    """
+    Perform basic validation on command line arguments
+    """
+
     if args.column1[0] < 1 or args.column2[0] < 1:
         sys.stderr.write('Error: Valid column values are >= 1\n')
         return False
@@ -160,6 +181,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not validate_args(args):
+        #exit if command line arg values are not valid
         sys.exit(1)
 
     file1 = args.file1[0]
@@ -185,4 +207,4 @@ if __name__ == '__main__':
     join.filter_mode = args.filter_mode
     join.remove_duplicate = args.remove_duplicate
 
-    join.run()
+    join.run()  #begin processing
