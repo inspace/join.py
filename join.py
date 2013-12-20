@@ -34,6 +34,10 @@ class Join:
 
         f1_map = {}
 
+        delimiter1 = self.delimiter1
+        column1 = self.column1-1
+        output_delimiter = self.output_delimiter
+
         f = None
         try:
             f = open(self.file1)
@@ -42,19 +46,20 @@ class Join:
                 linenum += 1
 
                 line = line.strip()
-                chunks = line.split(self.delimiter1) #split by file1 delimiter
+                chunks = line.split(delimiter1) #split by file1 delimiter
 
-                if len(chunks) < self.column1:   
+                try:
+                    key = chunks[column1] #get value at column1
+                except IndexError:
                     #print error if the specified column doesn't exist for this line
                     sys.stderr.write(self.basename1+' line '+str(linenum)+': column missing\n')
                     continue
-
-                key = chunks[self.column1-1] #get value at column1
     
-                if key not in f1_map:        #initialize list to hold lines for this key
-                    f1_map[key] = list()
-    
-                f1_map[key].append(line)
+                try:
+                    f1_map[key].append(line)
+                except KeyError:
+                    f1_map[key] = [line]
+                
         except:
             sys.stderr.write('Error reading '+self.file1+'\n')
             raise
@@ -65,8 +70,15 @@ class Join:
         return f1_map
 
     def run(self):
-        
+
         f1_map = self.parse_file1() #parse file1
+        
+        delimiter2 = self.delimiter2
+        column2 = self.column2-1
+        output_delimiter = self.output_delimiter
+        join_separator = self.join_separator
+        remove_duplicate = self.remove_duplicate
+        filter_mode = self.filter_mode
 
         f = None
         try:
@@ -76,14 +88,14 @@ class Join:
                 linenum += 1
 
                 line = line.strip()
-                chunks = line.split(self.delimiter2)
-    
-                if len(chunks) < self.column2:
+                chunks = line.split(delimiter2)
+
+                try:
+                    key = chunks[column2]  #value at column2 on this line
+                except IndexError:
                     #print error if the specified column doesn't exist for this line
                     sys.stderr.write(self.basename2+' line '+str(linenum)+': column missing\n')
                     continue
-
-                key = chunks[self.column2-1]  #value at column2 on this line
 
 
                 """
@@ -92,18 +104,18 @@ class Join:
                 We also handle the remove_duplicate flag here so it impacts what the 
                 outputted line looks like.
                 """
-                if self.output_delimiter != None:
-                    if self.remove_duplicate:
+                if output_delimiter != None:
+                    if remove_duplicate:
                         #remove the joined column from file2's line
-                        chunks.pop(self.column2-1) #remove matching column from file2 line
-                        line = self.output_delimiter.join(chunks)
+                        chunks.pop(column2) #remove matching column from file2 line
+                        line = output_delimiter.join(chunks)
                     else:
-                        line = line.replace(self.delimiter2, self.output_delimiter)
+                        line = line.replace(delimiter2, output_delimiter)
                 else: #output delimiter is None
-                    if self.remove_duplicate:
+                    if remove_duplicate:
                         #remove the joined column from file2's line
-                        chunks.pop(self.column2-1) #remove matching column from file2 line
-                        line = self.delimiter2.join(chunks)
+                        chunks.pop(column2) #remove matching column from file2 line
+                        line = delimiter2.join(chunks)
 
 
                 
@@ -117,11 +129,11 @@ class Join:
                             f1_line = f1_line.replace(self.delimiter1, self.output_delimiter)
 
                         # if filter flag is set then we don't output lines from file2
-                        if self.filter_mode: 
+                        if filter_mode: 
                             print(f1_line)
                         else:
                             #otherwise print file1 line and then file2 line
-                            print(f1_line+self.join_separator+line)
+                            print('%s%s%s' % (f1_line,join_separator,line))
         except:
             sys.stderr.write('Error reading: '+self.file2+'\n')
             raise
