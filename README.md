@@ -66,6 +66,8 @@ produces
 ```
 
 ###To Do
+- [ ] left join support
+- [ ] preserve key input order
 - [ ] ignore commented out lines
 
 ###Requirements
