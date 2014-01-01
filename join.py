@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import math
 
 try:
     import argparse
@@ -8,7 +9,7 @@ except:
     sys.stderr.write('Looks like you are using < Python 2.7. Please install the argparse module manually with "sudo pip install argparse" or "sudo easy_install argparse"\n')
     sys.exit(2)
 
-version='1.0'
+version = '1.1-alpha'
 
 class Join:
     
@@ -20,8 +21,8 @@ class Join:
 
         self.column1 = 1
         self.column2 = 1
-        self.delimiter1 = ' '
-        self.delimiter2 = ' '
+        self.delimiter1 = os.getenv('IFS', ' ')
+        self.delimiter2 = os.getenv('IFS', ' ')
         self.output_delimiter = None
         self.join_separator = ' '
         self.filter_mode = False
@@ -45,7 +46,7 @@ class Join:
             for line in f:     #for each line in file1
                 linenum += 1
 
-                line = line.strip()
+                line = line.rstrip()
                 chunks = line.split(delimiter1) #split by file1 delimiter
 
                 try:
@@ -59,7 +60,8 @@ class Join:
                     f1_map[key].append(line)
                 except KeyError:
                     f1_map[key] = [line]
-                
+                    
+                del chunks
         except:
             sys.stderr.write('Error reading '+self.file1+'\n')
             raise
@@ -87,7 +89,7 @@ class Join:
             for line in f:   #for each line in file2
                 linenum += 1
 
-                line = line.strip()
+                line = line.rstrip()
                 chunks = line.split(delimiter2)
 
                 try:
@@ -96,7 +98,6 @@ class Join:
                     #print error if the specified column doesn't exist for this line
                     sys.stderr.write(self.basename2+' line '+str(linenum)+': column missing\n')
                     continue
-
 
                 """
                 If the output_delimiter is set then we need to replace in each line.
@@ -117,29 +118,153 @@ class Join:
                         chunks.pop(column2) #remove matching column from file2 line
                         line = delimiter2.join(chunks)
 
-
+                del chunks
                 
-                if key in f1_map: #if key from file2 is in file1 then join these
-                
+                try:
                     f1_lines = f1_map[key]  #get all the lines with this key from file1
+
                     for f1_line in f1_lines:
 
-                        if self.output_delimiter != None:
+                        if output_delimiter != None:
                             #if output_delimiter is set then replace file1's delimiter
-                            f1_line = f1_line.replace(self.delimiter1, self.output_delimiter)
+                            f1_line = f1_line.replace(delimiter1, output_delimiter)
 
                         # if filter flag is set then we don't output lines from file2
-                        if filter_mode: 
+                        if filter_mode:
                             print(f1_line)
                         else:
                             #otherwise print file1 line and then file2 line
                             print('%s%s%s' % (f1_line,join_separator,line))
+                except KeyError:
+                    #do nothing
+                    pass
+                
         except:
             sys.stderr.write('Error reading: '+self.file2+'\n')
             raise
         finally:
             if f is not None:
                 f.close()
+
+class MemoryEfficientJoin(Join):
+
+    def __init__(self, file1, file2, file_chunks):
+        Join.__init__(self, file1, file2)
+        self.file_chunks = file_chunks
+        self.file1_linenum = 0
+
+    def parse_file1(self, f, chunk_size):
+
+        delimiter1 = self.delimiter1
+        column1 = self.column1-1
+        
+        f1_map = {}
+
+        lines = f.readlines(chunk_size)
+        
+        for line in lines:     #for each line in lines
+            self.file1_linenum += 1
+
+            line = line.rstrip()
+            chunks = line.split(delimiter1) #split by file1 delimiter
+
+            try:
+                key = chunks[column1] #get value at column1
+            except IndexError:
+                #print error if the specified column doesn't exist for this line
+                sys.stderr.write(self.basename1+' line '+str(self.file1_linenum)+': column missing\n')
+                continue
+
+            try:
+                f1_map[key].append(line)
+            except KeyError:
+                f1_map[key] = [line]
+        
+        return f1_map
+    
+    def run(self):
+        
+        file1_bytes = os.path.getsize(self.file1)
+        read_size = int(math.ceil(file1_bytes/float(self.file_chunks)))
+
+        file1_handle = open(self.file1)
+        file2_handle = open(self.file2)
+            
+        try:
+
+            for i in range(0, self.file_chunks):
+
+                try:
+                    f1_map = self.parse_file1(file1_handle, read_size) #parse file1
+                except:
+                    sys.stderr.write('Error reading '+self.file1+'\n')
+                    raise
+
+                try:
+                    file2_handle.seek(0)
+                    self.match(file2_handle, f1_map)
+                except:
+                    sys.stderr.write('Error reading '+self.file2+'\n')
+                    raise
+        except:
+            sys.stderr.write('Error reading '+self.file1+'\n')
+            raise
+        finally:
+            file1_handle.close()
+            file2_handle.close()
+
+    def match(self, f, f1_map):
+
+        delimiter2 = self.delimiter2
+        column2 = self.column2-1
+        output_delimiter = self.output_delimiter
+        join_separator = self.join_separator
+        remove_duplicate = self.remove_duplicate
+        filter_mode = self.filter_mode
+        
+        linenum = 0
+        for line in f:  #for each line in file2
+            linenum += 1
+
+            line = line.rstrip()
+            chunks = line.split(delimiter2)
+
+            try:
+                key = chunks[column2]  #value at column2 on this line
+            except IndexError:
+                #print error if the specified column doesn't exist for this line
+                sys.stderr.write(self.basename2+' line '+str(linenum)+': column missing\n')
+                continue
+       
+            if output_delimiter != None:
+                if remove_duplicate:
+                    #remove the joined column from file2's line
+                    chunks.pop(column2) #remove matching column from file2 line
+                    line = output_delimiter.join(chunks)
+                else:
+                    line = line.replace(delimiter2, output_delimiter)
+            else: #output delimiter is None
+                if remove_duplicate:
+                    #remove the joined column from file2's line
+                    chunks.pop(column2) #remove matching column from file2 line
+                    line = delimiter2.join(chunks)
+                
+            try:    
+                f1_lines = f1_map[key]  #get all the lines with this key from file1
+                for f1_line in f1_lines:
+
+                    if output_delimiter != None:
+                        #if output_delimiter is set then replace file1's delimiter
+                        f1_line = f1_line.replace(delimiter1, output_delimiter)
+
+                    # if filter flag is set then we don't output lines from file2
+                    if filter_mode: 
+                        print(f1_line)
+                    else:
+                        #otherwise print file1 line and then file2 line
+                        print('%s%s%s' % (f1_line,join_separator,line))
+            except KeyError:
+                pass #if key isn't in f1_map then do nothing
 
 def validate_args(args):
     """
@@ -188,6 +313,9 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--filter-mode', action='store_true', 
                         help='Only output matches from file1 (default: off)')
     parser.add_argument('-r', '--remove-duplicate', action='store_true', help='Only output one of the matching columns (default: off)')
+    parser.add_argument('-M', '--memory-efficient', action='store_true', help='Use the memory efficient implementation. (default: off)')
+    parser.add_argument('-B', '--file-blocks', nargs=1, type=int, default=[50], 
+                        help='Process file1 in N separate chunks. This option is ignored if not used with -M/--memory-efficient. (default: 50)')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s '+version)
 
     args = parser.parse_args()
@@ -199,7 +327,11 @@ if __name__ == '__main__':
     file1 = args.file1[0]
     file2 = args.file2[0]
 
-    join = Join(file1, file2)
+    if args.memory_efficient:
+        file_blocks = args.file_blocks[0]
+        join = MemoryEfficientJoin(file1, file2, file_blocks)
+    else:
+        join = Join(file1, file2)
 
     join.column1 = args.column1[0]
     join.column2 = args.column2[0]
