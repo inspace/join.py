@@ -66,7 +66,8 @@ produces
 ```
 
 ###To Do
-- [ ] IFS support
+- [x] IFS support
+- [x] large data file support
 - [ ] left join support
 - [ ] preserve key input order
 - [ ] ignore commented out lines
