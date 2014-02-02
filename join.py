@@ -27,7 +27,8 @@ class Join:
         self.join_separator = ' '
         self.filter_mode = False
         self.remove_duplicate = False
-        
+        self.missing_mode = False       
+ 
         self.file1_linenum = 0
 
     def parse_file1(self):
@@ -74,13 +75,15 @@ class Join:
         return f1_map
 
     def match(self, iter, f1_map):
-        
+
+        delimiter1 = self.delimiter1        
         delimiter2 = self.delimiter2
         column2 = self.column2-1
         output_delimiter = self.output_delimiter
         join_separator = self.join_separator
         remove_duplicate = self.remove_duplicate
         filter_mode = self.filter_mode
+        missing_mode = self.missing_mode
 
         linenum = 0
 
@@ -117,7 +120,12 @@ class Join:
                     line = delimiter2.join(chunks)
 
             del chunks
-                
+            
+            if missing_mode:
+                if key not in f1_map:
+                    print(key)
+                continue
+
             try:
                 f1_lines = f1_map[key]  #get all the lines with this key from file1
 
@@ -134,8 +142,7 @@ class Join:
                         #otherwise print file1 line and then file2 line
                         print('%s%s%s' % (f1_line,join_separator,line))
             except KeyError:
-                #do nothing
-                pass
+                pass            
 
     def run(self):
 
@@ -241,6 +248,8 @@ if __name__ == '__main__':
                         help='Separator between joined lines. This will be set to --output-delimiter if not overridden. (default: " ")')
     parser.add_argument('-f', '--filter-mode', action='store_true', 
                         help='Only output matches from file1 (default: off)')
+    parser.add_argument('--missing-mode', action='store_true',
+                        help='Only print column values in file2 that are not in file1 (default: off)')
     parser.add_argument('-r', '--remove-duplicate', action='store_true', help='Only output one of the matching columns (default: off)')
     parser.add_argument('-M', '--memory-efficient', action='store_true', help='Use the memory efficient implementation. (default: off)')
     parser.add_argument('-B', '--file-blocks', nargs=1, type=int, default=[50], 
@@ -278,6 +287,7 @@ if __name__ == '__main__':
         join.join_separator = args.join_separator[0]
 
     join.filter_mode = args.filter_mode
+    join.missing_mode = args.missing_mode
     join.remove_duplicate = args.remove_duplicate
 
     join.run()  #begin processing
