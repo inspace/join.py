@@ -2,6 +2,10 @@
 import sys
 import os
 import math
+from signal import signal, SIGPIPE, SIG_DFL
+
+#Ignore SIG_PIPE and don't throw exceptions on it
+signal(SIGPIPE, SIG_DFL)
 
 try:
     import argparse
