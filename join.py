@@ -2,10 +2,15 @@
 import sys
 import os
 import math
-from signal import signal, SIGPIPE, SIG_DFL
+from signal import signal, SIGPIPE, SIG_DFL, SIGINT
+
+def signal_handler(signum, frame):
+    #exit on CTRL-C interrupt
+    sys.exit(0)
 
 #Ignore SIG_PIPE and don't throw exceptions on it
 signal(SIGPIPE, SIG_DFL)
+signal(SIGINT, signal_handler)
 
 try:
     import argparse
@@ -127,7 +132,7 @@ class Join:
             
             if missing_mode:
                 if key not in f1_map:
-                    print(key)
+                    print(line)
                 continue
 
             try:
