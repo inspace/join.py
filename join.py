@@ -2,15 +2,19 @@
 import sys
 import os
 import math
-from signal import signal, SIGPIPE, SIG_DFL, SIGINT
+import signal
 
 def signal_handler(signum, frame):
     #exit on CTRL-C interrupt
     sys.exit(0)
 
-#Ignore SIG_PIPE and don't throw exceptions on it
-signal(SIGPIPE, SIG_DFL)
-signal(SIGINT, signal_handler)
+try:
+    #Ignore SIG_PIPE and don't throw exceptions on it
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal_handler)
+except AttributeError:
+    #Doesn't work in Windows. POSIX only.
+    pass
 
 try:
     import argparse
