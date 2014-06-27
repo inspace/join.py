@@ -22,7 +22,7 @@ except:
     sys.stderr.write('Looks like you are using < Python 2.7. Please install the argparse module manually with "sudo pip install argparse" or "sudo easy_install argparse"\n')
     sys.exit(2)
 
-version = '1.1-alpha'
+version = '1.2-1'
 
 class Join:
     
@@ -444,6 +444,10 @@ if __name__ == '__main__':
 
     join.delimiter1 = args.delimiter1[0]
     join.delimiter2 = args.delimiter2[0]
+    
+    #hack for passing in tab delimiter in Windows
+    join.delimiter1 = '\t' if join.delimiter1 == 't' else join.delimiter1
+    join.delimiter2 = '\t' if join.delimiter2 == 't' else join.delimiter2
 
     join.output_delimiter = None if args.output_delimiter is None else args.output_delimiter[0]
     
