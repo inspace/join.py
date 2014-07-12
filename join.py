@@ -405,9 +405,9 @@ if __name__ == '__main__':
                         help='Column number for file 1 (default: 1)')
     parser.add_argument('-c2', '--column2', type=int, default=[1], nargs=1, 
                         help='Column number for file 2 (default: 1)')
-    parser.add_argument('-d1', '--delimiter1', default=[os.getenv('IFS', None)], nargs=1, 
+    parser.add_argument('-d1', '--delimiter1', default=[os.getenv('IFS', ' ')], nargs=1, 
                         help='Delimiter for file 1 (default: IFS environment variable else " ")')
-    parser.add_argument('-d2', '--delimiter2', default=[os.getenv('IFS', None)], nargs=1, 
+    parser.add_argument('-d2', '--delimiter2', default=[os.getenv('IFS', ' ')], nargs=1, 
                         help='Delimiter for file 2 (default: IFS environment variable else " ")')
     parser.add_argument('-o', '--output-delimiter', nargs=1,
                         help='Output delimiter. Default is to leave delimiters for each file in place.')
@@ -444,7 +444,7 @@ if __name__ == '__main__':
 
     join.delimiter1 = args.delimiter1[0]
     join.delimiter2 = args.delimiter2[0]
-    
+
     #hack for passing in tab delimiter in Windows
     join.delimiter1 = '\t' if join.delimiter1 == 't' else join.delimiter1
     join.delimiter2 = '\t' if join.delimiter2 == 't' else join.delimiter2
