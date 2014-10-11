@@ -32,6 +32,7 @@ class Join:
         self.filter_mode = False
         self.remove_duplicate = False
         self.missing_mode = False       
+        self.prefix_len = None
  
         self.file1_linenum = 0
 
@@ -55,7 +56,8 @@ class Join:
 
         delimiter1 = self.delimiter1
         column1 = self.column1-1
-        
+        prefix_len = self.prefix_len
+
         f1_map = {}
 
         for line in iter:     #for each line in lines
@@ -66,6 +68,10 @@ class Join:
 
             try:
                 key = chunks[column1] #get value at column1
+        
+                if prefix_len is not None: #only match on the prefix
+                    key = key[:prefix_len]
+
             except IndexError:
                 #print error if the specified column doesn't exist for this line
                 sys.stderr.write(self.basename1+' line '+str(self.file1_linenum)+': column missing\n')
@@ -88,6 +94,7 @@ class Join:
         remove_duplicate = self.remove_duplicate
         filter_mode = self.filter_mode
         missing_mode = self.missing_mode
+        prefix_len = self.prefix_len
 
         linenum = 0
 
@@ -99,6 +106,9 @@ class Join:
 
             try:
                 key = chunks[column2]  #value at column2 on this line
+
+                if prefix_len is not None:
+                    key = key[:prefix_len]
             except IndexError:
                 #print error if the specified column doesn't exist for this line
                 sys.stderr.write(self.basename2+' line '+str(linenum)+': column missing\n')
@@ -258,6 +268,8 @@ if __name__ == '__main__':
     parser.add_argument('-M', '--memory-efficient', action='store_true', help='Use the memory efficient implementation. (default: off)')
     parser.add_argument('-B', '--file-blocks', nargs=1, type=int, default=[50], 
                         help='Process file1 in N separate chunks. This option is ignored if not used with -M/--memory-efficient. (default: 50)')
+    parser.add_argument('-p', '--prefix-len', nargs=1, type=int, default=[None],
+                        help='Match on the first N characters (default: all characters)')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s '+version)
 
     args = parser.parse_args()
@@ -293,5 +305,6 @@ if __name__ == '__main__':
     join.filter_mode = args.filter_mode
     join.missing_mode = args.missing_mode
     join.remove_duplicate = args.remove_duplicate
+    join.prefix_len = args.prefix_len[0]
 
     join.run()  #begin processing
