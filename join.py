@@ -2,10 +2,19 @@
 import sys
 import os
 import math
-from signal import signal, SIGPIPE, SIG_DFL
+import signal
 
-#Ignore SIG_PIPE and don't throw exceptions on it
-signal(SIGPIPE, SIG_DFL)
+def signal_handler(signum, frame):
+    #exit on CTRL-C interrupt
+    sys.exit(0)
+
+try:
+    #Ignore SIG_PIPE and don't throw exceptions on it
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal_handler)
+except AttributeError:
+    #Doesn't work in Windows. POSIX only.
+    pass
 
 try:
     import argparse
@@ -13,7 +22,7 @@ except:
     sys.stderr.write('Looks like you are using < Python 2.7. Please install the argparse module manually with "sudo pip install argparse" or "sudo easy_install argparse"\n')
     sys.exit(2)
 
-version = '1.1-alpha'
+version = '1.2-1'
 
 class Join:
     
@@ -25,8 +34,8 @@ class Join:
 
         self.column1 = 1
         self.column2 = 1
-        self.delimiter1 = os.getenv('IFS', ' ')
-        self.delimiter2 = os.getenv('IFS', ' ')
+        self.delimiter1 = os.getenv('IFS', None)
+        self.delimiter2 = os.getenv('IFS', None)
         self.output_delimiter = None
         self.join_separator = ' '
         self.filter_mode = False
@@ -137,7 +146,7 @@ class Join:
             
             if missing_mode:
                 if key not in f1_map:
-                    print(key)
+                    print(line)
                 continue
 
             try:
@@ -172,6 +181,160 @@ class Join:
         finally:
             if f is not None:
                 f.close()
+
+class ZigZagJoin(Join):
+    
+    def __init__(self, file1, file2):
+        Join.__init__(self, file1, file2)
+        self.file1_linenum = 0
+        self.file2_linenum = 0
+        self.file1_nextline = None
+        self.file2_nextline = None
+
+    def run(self):
+            
+        f1 = open(self.file1)
+        f2 = open(self.file2)
+
+        delimiter1 = self.delimiter1
+        delimiter2 = self.delimiter2
+        column2 = self.column2-1
+        output_delimiter = self.output_delimiter
+        join_separaator = self.join_separator
+        remove_duplicate = self.remove_duplicate
+        filter_mode = self.filter_mode
+        missing_mode = self.missing_mode
+
+        f1_eof = False
+        f2_eof = False
+        current_key = None
+
+        while not f1_eof:
+           
+            if not f1_eof:
+                f1_eof, current_key, f1_lines = self.readnext_file1(f1)
+            
+            if not f2_eof:
+                f2_eof, f2_lines = self.readnext_file2(current_key, f2)
+
+            f2_lines_out = list()
+            for (f2_line, f2_chunks) in f2_lines:
+                if remove_duplicate:
+                    f2_chunks.pop(column2)
+                
+                if output_delimiter != None:
+                    f2_line = output_delimiter.join(f2_chunks)
+                else: #output delimiter is None
+                    if delimiter2 is None and remove_duplicate:
+                        f2_line = ' '.join(f2_chunks)
+                    elif delimiter2 is not None and remove_duplicate:
+                        f2_line = delimiter2.join(f2_chunks)
+                
+                f2_lines_out.append(f2_line)
+
+
+            #output matches
+            for (f1_line, f1_chunks) in f1_lines:
+
+                if output_delimiter != None:
+                    f1_line = output_delimiter.join(f1_chunks)
+
+                if filter_mode and f2_lines:
+                    print(f1_line)
+                    continue
+
+                for f2_line in f2_lines_out:           
+                    print('%s%s%s' % (f1_line, self.join_separator, f2_line))
+
+        f1.close()
+        f2.close()
+
+    def readnext_file2(self, current_key, f2):
+        
+        lines = list()
+        column2 = self.column2-1
+
+        
+        if self.file2_nextline != None:
+            chunks1 = self.file2_nextline.split(self.delimiter2)
+            
+            try:
+                f2_key = chunks1[column2]
+                if f2_key == current_key:
+                    lines.append((self.file2_nextline, chunks1))
+                elif f2_key > current_key:
+                    return False, lines
+            except IndexError:
+                sys.stderr.write('%s line %d: column missing\n' % (self.basename1, self.file2_linenum))
+        
+
+        eof = True
+        for line1 in f2:
+            self.file2_linenum += 1
+
+            line1 = line1.strip()
+            chunks = line1.split(self.delimiter2)
+            
+            try:
+                f2_key = chunks[column2]
+                if f2_key == current_key:
+                    lines.append((line1, chunks))
+                elif f2_key > current_key:
+                    #hit key greater than file1's keys
+                    self.file2_nextline = line1
+                    eof = False
+                    break
+            except IndexError:
+                 sys.stderr.write('%s line %d: column missing\n' % (self.basename1, self.file2_linenum))
+                 continue
+            
+            
+        return eof, lines
+
+    def readnext_file1(self, f1):
+
+        current_key = None
+        lines = list()
+        column1 = self.column1-1
+
+        if self.file1_nextline != None:
+            chunks = self.file1_nextline.split(self.delimiter1)
+            try:
+                f1_key = chunks[column1]
+                if current_key == None:
+                    current_key = f1_key
+                    lines.append((self.file1_nextline, chunks))
+                elif f1_key == current_key:
+                    lines.append((self.file1_nextline, chunks))
+            except IndexError:
+                sys.stderr.write('%s line %d: column missing\n' % (self.basename1,self.file1_linenum))
+
+        eof = True
+        for line in f1:
+            self.file1_linenum += 1
+
+            line = line.strip()
+            chunks = line.split(self.delimiter1)
+            try:
+                
+                f1_key = chunks[column1]
+                if current_key == None:
+                    current_key = f1_key
+                    lines.append((line, chunks))
+                elif f1_key == current_key:
+                    lines.append((line, chunks))
+                else:
+                    self.file1_nextline = line
+                    eof = False  
+                    break
+
+            except IndexError:
+                #print error if the specified column doesn't exist for this line
+                sys.stderr.write(self.basename1+' line '+str(self.file1_linenum)+': column missing\n')
+                continue
+
+        return eof, current_key, lines
+          
 
 class MemoryEfficientJoin(Join):
 
@@ -282,8 +445,9 @@ if __name__ == '__main__':
     file2 = args.file2[0]
 
     if args.memory_efficient:
-        file_blocks = args.file_blocks[0]
-        join = MemoryEfficientJoin(file1, file2, file_blocks)
+        #file_blocks = args.file_blocks[0]
+        #join = MemoryEfficientJoin(file1, file2, file_blocks)
+        join = ZigZagJoin(file1, file2)
     else:
         join = Join(file1, file2)
 
@@ -292,6 +456,10 @@ if __name__ == '__main__':
 
     join.delimiter1 = args.delimiter1[0]
     join.delimiter2 = args.delimiter2[0]
+
+    #hack for passing in tab delimiter in Windows
+    join.delimiter1 = '\t' if join.delimiter1 == 't' else join.delimiter1
+    join.delimiter2 = '\t' if join.delimiter2 == 't' else join.delimiter2
 
     join.output_delimiter = None if args.output_delimiter is None else args.output_delimiter[0]
     
