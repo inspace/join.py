@@ -204,6 +204,7 @@ class ZigZagJoin(Join):
         remove_duplicate = self.remove_duplicate
         filter_mode = self.filter_mode
         missing_mode = self.missing_mode
+        prefix_len = self.prefix_len
 
         f1_eof = False
         f2_eof = False
@@ -474,5 +475,8 @@ if __name__ == '__main__':
     join.missing_mode = args.missing_mode
     join.remove_duplicate = args.remove_duplicate
     join.prefix_len = args.prefix_len[0]
-
-    join.run()  #begin processing
+    
+    try:
+        join.run()  #begin processing
+    except KeyboardInterrupt:
+        pass #ignore Control-C
